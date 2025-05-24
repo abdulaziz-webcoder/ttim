@@ -5,13 +5,14 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { BookOpen, Clock, Star, Play, CheckCircle, Calendar } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useToast } from "@/hooks/use-toast";
 
 interface Test {
   id: number;
   title: string;
   subject: string;
   score: number | null;
-  maxScore: number;
+  max_score: number;
   status: 'completed' | 'available' | 'upcoming';
   date: string;
 }
@@ -24,6 +25,7 @@ interface TestCardProps {
 
 const TestCard = ({ test, delay = 0, expanded = false }: TestCardProps) => {
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -45,12 +47,24 @@ const TestCard = ({ test, delay = 0, expanded = false }: TestCardProps) => {
 
   const handleStartTest = () => {
     if (test.status === 'available') {
+      console.log('Starting test with ID:', test.id);
       navigate(`/test/${test.id}`);
+    } else if (test.status === 'upcoming') {
+      toast({
+        title: "Test hali mavjud emas",
+        description: "Bu test hali boshlanmagan.",
+        variant: "destructive",
+      });
+    } else if (test.status === 'completed') {
+      toast({
+        title: "Test allaqachon yakunlangan",
+        description: "Siz bu testni allaqachon topshirgansiz.",
+      });
     }
   };
 
   const StatusIcon = getStatusIcon(test.status);
-  const scorePercentage = test.score ? (test.score / test.maxScore) * 100 : 0;
+  const scorePercentage = test.score ? (test.score / test.max_score) * 100 : 0;
 
   return (
     <Card 
@@ -95,21 +109,15 @@ const TestCard = ({ test, delay = 0, expanded = false }: TestCardProps) => {
         {test.status === 'completed' && test.score !== null && (
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-gray-600">Score</span>
+              <span className="text-sm font-medium text-gray-600">Ball</span>
               <div className="flex items-center gap-2">
                 <Star className="w-4 h-4 text-amber-500" />
-                <span className="font-bold text-lg">{test.score}/{test.maxScore}</span>
+                <span className="font-bold text-lg">{test.score}/{test.max_score}</span>
               </div>
             </div>
             <Progress 
               value={scorePercentage} 
-              className={`h-2 bg-gray-100 ${
-                scorePercentage >= 90 
-                  ? 'bg-gradient-to-r from-green-500 to-teal-600' 
-                  : scorePercentage >= 70 
-                    ? 'bg-gradient-to-r from-amber-500 to-orange-600' 
-                    : 'bg-gradient-to-r from-red-500 to-pink-600'
-              }`}
+              className="h-2 bg-gray-100"
             />
             <div className="text-right">
               <span className={`text-sm font-semibold ${
@@ -133,18 +141,22 @@ const TestCard = ({ test, delay = 0, expanded = false }: TestCardProps) => {
                 className="flex-1 bg-gradient-to-r from-indigo-500 to-blue-600 hover:from-indigo-600 hover:to-blue-700 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-indigo-400/20 border-none"
               >
                 <Play className="w-4 h-4 mr-2" />
-                Start Test
+                Testni boshlash
               </Button>
             )}
             {test.status === 'completed' && (
-              <Button variant="outline" className="flex-1 border-indigo-200 hover:bg-indigo-50 transition-colors duration-300 text-indigo-700">
-                View Results
+              <Button 
+                variant="outline" 
+                className="flex-1 border-indigo-200 hover:bg-indigo-50 transition-colors duration-300 text-indigo-700"
+                onClick={() => toast({ title: "Natijalarni ko'rish", description: "Ushbu funksiya tez orada qo'shiladi." })}
+              >
+                Natijalarni ko'rish
               </Button>
             )}
             {test.status === 'upcoming' && (
               <Button variant="outline" disabled className="flex-1">
                 <Calendar className="w-4 h-4 mr-2" />
-                Scheduled
+                Rejalashtirilgan
               </Button>
             )}
           </div>
