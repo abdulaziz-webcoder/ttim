@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { BookOpen, Clock, Star, Play, CheckCircle, Calendar } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 interface Test {
   id: number;
@@ -22,6 +23,8 @@ interface TestCardProps {
 }
 
 const TestCard = ({ test, delay = 0, expanded = false }: TestCardProps) => {
+  const navigate = useNavigate();
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'completed': return 'from-green-500 to-teal-600';
@@ -37,6 +40,12 @@ const TestCard = ({ test, delay = 0, expanded = false }: TestCardProps) => {
       case 'available': return Play;
       case 'upcoming': return Calendar;
       default: return Clock;
+    }
+  };
+
+  const handleStartTest = () => {
+    if (test.status === 'available') {
+      navigate(`/test/${test.id}`);
     }
   };
 
@@ -119,7 +128,10 @@ const TestCard = ({ test, delay = 0, expanded = false }: TestCardProps) => {
         {expanded && (
           <div className="mt-4 flex gap-2">
             {test.status === 'available' && (
-              <Button className="flex-1 bg-gradient-to-r from-indigo-500 to-blue-600 hover:from-indigo-600 hover:to-blue-700 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-indigo-400/20 border-none">
+              <Button 
+                onClick={handleStartTest}
+                className="flex-1 bg-gradient-to-r from-indigo-500 to-blue-600 hover:from-indigo-600 hover:to-blue-700 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-indigo-400/20 border-none"
+              >
                 <Play className="w-4 h-4 mr-2" />
                 Start Test
               </Button>

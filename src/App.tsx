@@ -8,6 +8,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import ErrorBoundary from "./components/ErrorBoundary";
 import Index from "./pages/Index";
 import Teacher from "./pages/Teacher";
+import TakeTest from "./pages/TakeTest";
 import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -36,6 +37,7 @@ const App = () => (
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
+              <Route path="/test/:testId" element={<ProtectedRoute><TakeTest /></ProtectedRoute>} />
               <Route path="/teacher" element={<ProtectedRoute allowedRoles={["teacher", "admin"]}><Teacher /></ProtectedRoute>} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
