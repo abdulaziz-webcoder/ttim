@@ -6,16 +6,7 @@ import { Progress } from "@/components/ui/progress";
 import { BookOpen, Clock, Star, Play, CheckCircle, Calendar } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
-
-interface Test {
-  id: number;
-  title: string;
-  subject: string;
-  score: number | null;
-  max_score: number;
-  status: 'completed' | 'available' | 'upcoming';
-  date: string;
-}
+import { Test } from '@/types/test';
 
 interface TestCardProps {
   test: Test;
@@ -26,6 +17,8 @@ interface TestCardProps {
 const TestCard = ({ test, delay = 0, expanded = false }: TestCardProps) => {
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  console.log('TestCard rendering with test:', test);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -46,6 +39,8 @@ const TestCard = ({ test, delay = 0, expanded = false }: TestCardProps) => {
   };
 
   const handleStartTest = () => {
+    console.log('Attempting to start test:', test);
+    
     if (test.status === 'available') {
       console.log('Starting test with ID:', test.id);
       navigate(`/test/${test.id}`);

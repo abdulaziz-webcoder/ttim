@@ -2,37 +2,21 @@
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { BookOpen, Search, TrendingUp, Award, Users, Filter } from "lucide-react";
+import { BookOpen, Search, TrendingUp, Award } from "lucide-react";
 import { useQuery } from '@tanstack/react-query';
 import { getStudentTests, getStudentStatistics } from '@/services/api';
 import { useToast } from "@/hooks/use-toast";
 import Navigation from "@/components/Navigation";
 import TestCard from "@/components/TestCard";
-
-interface Test {
-  id: number;
-  title: string;
-  subject: string;
-  description: string;
-  duration: number;
-  max_score: number;
-  status: 'completed' | 'available' | 'upcoming';
-  date: string;
-  score?: number;
-}
-
-interface Statistics {
-  total_tests_taken: number;
-  average_score: number;
-  total_tests_available: number;
-}
+import { Test, Statistics } from '@/types/test';
 
 const Index = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const { toast } = useToast();
+
+  console.log('Index component rendering');
 
   // Fetch student tests
   const { data: tests = [], isLoading: isLoadingTests, error: testsError } = useQuery({
@@ -48,6 +32,9 @@ const Index = () => {
     retry: 2,
   });
 
+  console.log('Raw tests data from API:', tests);
+  console.log('Raw stats data from API:', stats);
+
   // Handle API errors
   if (testsError) {
     console.error('Error loading tests:', testsError);
@@ -58,26 +45,48 @@ const Index = () => {
     });
   }
 
-  // Transform API data to match our interface
-  const transformedTests: Test[] = tests?.map((test: any) => ({
-    id: test.id,
-    title: test.title || 'Nomsiz test',
-    subject: test.subject || 'Umumiy',
-    description: test.description || '',
-    duration: test.duration || 60,
-    max_score: test.max_score || 100,
-    status: test.status || 'available',
-    date: test.created_at ? new Date(test.created_at).toLocaleDateString() : 'Noma\'lum',
-    score: test.score || null,
-  })) || [];
+  // Transform and validate API data
+  const transformedTests: Test[] = Array.isArray(tests) ? tests.map((test: any) => {
+    console.log('Transforming test:', test);
+    
+    // Ensure all required fields exist and have proper types
+    const transformedTest: Test = {
+      id: test?.id || 0,
+      title: test?.title || 'Nomsiz test',
+      subject: test?.subject || 'Umumiy',
+      description: test?.description || '',
+      duration: test?.duration || 60,
+      max_score: test?.max_score || 100,
+      status: test?.status || 'available',
+      date: test?.created_at ? new Date(test.created_at).toLocaleDateString() : 'Noma\'lum',
+      score: test?.score || null,
+    };
+    
+    console.log('Transformed test:', transformedTest);
+    return transformedTest;
+  }).filter(test => test.id > 0) : []; // Filter out invalid tests
 
-  // Filter tests based on search and status
+  console.log('Final transformed tests:', transformedTests);
+
+  // Filter tests based on search and status with proper null checks
   const filteredTests = transformedTests.filter((test) => {
-    const matchesSearch = test.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         test.subject?.toLowerCase().includes(searchTerm.toLowerCase());
+    if (!test || typeof test !== 'object') {
+      console.warn('Invalid test object:', test);
+      return false;
+    }
+
+    const title = test.title || '';
+    const subject = test.subject || '';
+    const searchLower = (searchTerm || '').toLowerCase();
+    
+    const matchesSearch = title.toLowerCase().includes(searchLower) ||
+                         subject.toLowerCase().includes(searchLower);
     const matchesStatus = statusFilter === 'all' || test.status === statusFilter;
+    
     return matchesSearch && matchesStatus;
   });
+
+  console.log('Filtered tests:', filteredTests);
 
   const defaultStats: Statistics = {
     total_tests_taken: stats?.total_tests_taken || 0,
