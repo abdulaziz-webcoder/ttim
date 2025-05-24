@@ -51,14 +51,6 @@ const Index = () => {
   } = useQuery({
     queryKey: ['student-tests'],
     queryFn: getStudentTests,
-    onError: (error: any) => {
-      console.error('Failed to fetch tests:', error);
-      toast({
-        title: "Xatolik!",
-        description: "Testlarni yuklashda muammo yuzaga keldi. Qayta urinib ko'ring.",
-        variant: "destructive",
-      });
-    }
   });
 
   // Fetch student statistics with proper error handling
@@ -69,34 +61,49 @@ const Index = () => {
   } = useQuery({
     queryKey: ['student-statistics'],
     queryFn: getStudentStatistics,
-    onError: (error: any) => {
-      console.error('Failed to fetch statistics:', error);
+  });
+
+  // Handle errors with useEffect
+  useEffect(() => {
+    if (testsError) {
+      console.error('Failed to fetch tests:', testsError);
+      toast({
+        title: "Xatolik!",
+        description: "Testlarni yuklashda muammo yuzaga keldi. Qayta urinib ko'ring.",
+        variant: "destructive",
+      });
+    }
+  }, [testsError, toast]);
+
+  useEffect(() => {
+    if (statsError) {
+      console.error('Failed to fetch statistics:', statsError);
       toast({
         title: "Xatolik!",
         description: "Statistikani yuklashda muammo yuzaga keldi. Qayta urinib ko'ring.",
         variant: "destructive",
       });
     }
-  });
+  }, [statsError, toast]);
 
-  // Transform API data for our components
+  // Transform API data for our components with proper null checks
   const transformedTests: TestData[] = testsData ? testsData.map((test: any) => ({
     id: test.id,
-    title: test.title,
-    subject: test.subject,
+    title: test.title || 'Nomsiz test',
+    subject: test.subject || 'Fan ko\'rsatilmagan',
     score: test.score,
     maxScore: test.max_score || 100,
-    status: test.status.toLowerCase(),
-    date: new Date(test.created_at).toLocaleDateString(),
+    status: test.status ? test.status.toLowerCase() : 'available',
+    date: test.created_at ? new Date(test.created_at).toLocaleDateString() : new Date().toLocaleDateString(),
   })) : [];
 
   // Use data from API or fallbacks
   const studentStats: StatisticsData = statisticsData ? {
-    totalTests: statisticsData.total_tests,
-    completedTests: statisticsData.completed_tests,
-    averageScore: statisticsData.average_score,
-    rank: statisticsData.rank,
-    totalStudents: statisticsData.total_students,
+    totalTests: statisticsData.total_tests || 0,
+    completedTests: statisticsData.completed_tests || 0,
+    averageScore: statisticsData.average_score || 0,
+    rank: statisticsData.rank || 0,
+    totalStudents: statisticsData.total_students || 0,
     subject_scores: statisticsData.subject_scores,
     current_grade: statisticsData.current_grade,
     class_average: statisticsData.class_average
