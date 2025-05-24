@@ -23,8 +23,8 @@ const Index = () => {
     // Welcome toast notification
     setTimeout(() => {
       toast({
-        title: "Welcome to TIMT!",
-        description: "Your intelligent testing platform",
+        title: "TIM ga xush kelibsiz!",
+        description: "Intellektual test platformasi",
         variant: "default",
       });
     }, 1000);
@@ -40,10 +40,10 @@ const Index = () => {
   };
 
   const recentTests = [
-    { id: 1, title: "Mathematics Quiz", subject: "Math", score: 92, maxScore: 100, status: "completed" as const, date: "2025-01-20" },
-    { id: 2, title: "Physics Chapter 5", subject: "Physics", score: 85, maxScore: 100, status: "completed" as const, date: "2025-01-18" },
-    { id: 3, title: "Chemistry Lab Test", subject: "Chemistry", score: null, maxScore: 100, status: "available" as const, date: "2025-01-25" },
-    { id: 4, title: "Biology Evolution", subject: "Biology", score: null, maxScore: 100, status: "upcoming" as const, date: "2025-01-28" }
+    { id: 1, title: "Matematika test", subject: "Matematika", score: 92, maxScore: 100, status: "completed" as const, date: "2025-01-20" },
+    { id: 2, title: "Fizika 5-bob", subject: "Fizika", score: 85, maxScore: 100, status: "completed" as const, date: "2025-01-18" },
+    { id: 3, title: "Kimyo laboratoria", subject: "Kimyo", score: null, maxScore: 100, status: "available" as const, date: "2025-01-25" },
+    { id: 4, title: "Biologiya evolyutsiya", subject: "Biologiya", score: null, maxScore: 100, status: "upcoming" as const, date: "2025-01-28" }
   ];
 
   return (
@@ -67,14 +67,14 @@ const Index = () => {
               <Target className="w-5 h-5 text-white" />
             </div>
             <span className="text-lg font-semibold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-              TIMT - Test Intelligence Management Tool
+              TIM - Test Intellekt Markazi
             </span>
           </div>
           <h1 className="text-5xl font-bold mb-4 bg-gradient-to-r from-indigo-600 via-purple-600 to-blue-600 bg-clip-text text-transparent animate-fade-in">
-            Master Your Learning Journey
+            O'rganish yo'lingizda ustun bo'ling
           </h1>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto animate-fade-in delay-300">
-            Advanced testing platform with real-time analytics, personalized insights, and modern learning experience
+            Real vaqt tahlillari, shaxsiy ko'rsatkichlar va zamonaviy o'quv tajribasi bilan ilg'or test platformasi
           </p>
         </div>
 
@@ -83,19 +83,19 @@ const Index = () => {
           <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 mb-8 bg-white/90 backdrop-blur-md shadow-xl border border-white/30 rounded-2xl overflow-hidden p-1">
             <TabsTrigger value="dashboard" className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-indigo-500 data-[state=active]:to-purple-600 data-[state=active]:text-white transition-all duration-300">
               <TrendingUp className="w-4 h-4" />
-              Dashboard
+              Bosh sahifa
             </TabsTrigger>
             <TabsTrigger value="tests" className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-indigo-500 data-[state=active]:to-purple-600 data-[state=active]:text-white transition-all duration-300">
               <BookOpen className="w-4 h-4" />
-              Tests
+              Testlar
             </TabsTrigger>
             <TabsTrigger value="statistics" className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-indigo-500 data-[state=active]:to-purple-600 data-[state=active]:text-white transition-all duration-300">
               <Trophy className="w-4 h-4" />
-              Statistics
+              Statistika
             </TabsTrigger>
             <TabsTrigger value="grades" className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-indigo-500 data-[state=active]:to-purple-600 data-[state=active]:text-white transition-all duration-300">
               <Award className="w-4 h-4" />
-              Grades
+              Baholar
             </TabsTrigger>
           </TabsList>
 
@@ -104,28 +104,28 @@ const Index = () => {
             {/* Quick Stats */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <StatisticsCard
-                title="Total Tests"
+                title="Jami testlar"
                 value={studentStats.totalTests}
                 icon={BookOpen}
                 color="from-indigo-500 to-indigo-600"
                 delay={0}
               />
               <StatisticsCard
-                title="Completed"
+                title="Bajarilgan"
                 value={studentStats.completedTests}
                 icon={Trophy}
                 color="from-green-500 to-teal-600"
                 delay={100}
               />
               <StatisticsCard
-                title="Average Score"
+                title="O'rtacha ball"
                 value={`${studentStats.averageScore}%`}
                 icon={Star}
                 color="from-amber-500 to-orange-600"
                 delay={200}
               />
               <StatisticsCard
-                title="Class Rank"
+                title="Sinf reytingi"
                 value={`#${studentStats.rank}`}
                 icon={Award}
                 color="from-purple-500 to-fuchsia-600"
@@ -138,7 +138,7 @@ const Index = () => {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
                   <Clock className="w-6 h-6 text-indigo-500" />
-                  Recent Tests
+                  So'nggi testlar
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -167,38 +167,38 @@ const Index = () => {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
                     <TrendingUp className="w-5 h-5 text-indigo-500" />
-                    Performance Overview
+                    Natijalar tahlili
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
                     <div>
                       <div className="flex justify-between mb-2">
-                        <span className="text-sm font-medium">Mathematics</span>
+                        <span className="text-sm font-medium">Matematika</span>
                         <span className="text-sm text-gray-600">92%</span>
                       </div>
-                      <Progress value={92} className="h-2 bg-indigo-100" indicatorClassName="bg-gradient-to-r from-indigo-500 to-purple-600" />
+                      <Progress value={92} className="h-2 bg-indigo-100" />
                     </div>
                     <div>
                       <div className="flex justify-between mb-2">
-                        <span className="text-sm font-medium">Physics</span>
+                        <span className="text-sm font-medium">Fizika</span>
                         <span className="text-sm text-gray-600">85%</span>
                       </div>
-                      <Progress value={85} className="h-2 bg-indigo-100" indicatorClassName="bg-gradient-to-r from-indigo-500 to-purple-600" />
+                      <Progress value={85} className="h-2 bg-indigo-100" />
                     </div>
                     <div>
                       <div className="flex justify-between mb-2">
-                        <span className="text-sm font-medium">Chemistry</span>
+                        <span className="text-sm font-medium">Kimyo</span>
                         <span className="text-sm text-gray-600">78%</span>
                       </div>
-                      <Progress value={78} className="h-2 bg-indigo-100" indicatorClassName="bg-gradient-to-r from-indigo-500 to-purple-600" />
+                      <Progress value={78} className="h-2 bg-indigo-100" />
                     </div>
                     <div>
                       <div className="flex justify-between mb-2">
-                        <span className="text-sm font-medium">Biology</span>
+                        <span className="text-sm font-medium">Biologiya</span>
                         <span className="text-sm text-gray-600">88%</span>
                       </div>
-                      <Progress value={88} className="h-2 bg-indigo-100" indicatorClassName="bg-gradient-to-r from-indigo-500 to-purple-600" />
+                      <Progress value={88} className="h-2 bg-indigo-100" />
                     </div>
                   </div>
                 </CardContent>
@@ -208,24 +208,24 @@ const Index = () => {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
                     <Users className="w-5 h-5 text-purple-500" />
-                    Class Statistics
+                    Sinf statistikasi
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-6">
                     <div className="text-center">
                       <div className="text-3xl font-bold text-purple-600 mb-2">#3</div>
-                      <div className="text-sm text-gray-600">Your Rank</div>
-                      <div className="text-xs text-gray-500 mt-1">out of {studentStats.totalStudents} students</div>
+                      <div className="text-sm text-gray-600">Sizning reytingingiz</div>
+                      <div className="text-xs text-gray-500 mt-1">{studentStats.totalStudents} o'quvchi ichida</div>
                     </div>
                     <div className="grid grid-cols-2 gap-4 text-center">
                       <div className="p-4 bg-white/80 rounded-xl shadow-lg border border-white/30 backdrop-blur-sm">
                         <div className="text-xl font-semibold text-green-600">A+</div>
-                        <div className="text-xs text-gray-600">Current Grade</div>
+                        <div className="text-xs text-gray-600">Hozirgi baho</div>
                       </div>
                       <div className="p-4 bg-white/80 rounded-xl shadow-lg border border-white/30 backdrop-blur-sm">
                         <div className="text-xl font-semibold text-indigo-600">87.5%</div>
-                        <div className="text-xs text-gray-600">Class Average</div>
+                        <div className="text-xs text-gray-600">Sinf o'rtachasi</div>
                       </div>
                     </div>
                   </div>
@@ -242,6 +242,28 @@ const Index = () => {
 
         {/* Contact Section */}
         <ContactSection />
+        
+        {/* Footer */}
+        <div className="mt-20 text-center">
+          <div className="flex items-center justify-center gap-2 text-gray-500 text-sm">
+            <span>Made with</span>
+            <div className="flex items-center">
+              <span className="inline-block bg-gradient-to-r from-green-600 to-green-700 text-white px-1 rounded text-xs">Django</span>
+              <span className="mx-1">+</span>
+              <span className="inline-block bg-gradient-to-r from-blue-600 to-blue-700 text-white px-1 rounded text-xs">React</span>
+            </div>
+            <span>with ❤️ by Abdulaziz</span>
+          </div>
+          <div className="mt-2">
+            <a href="https://t.me/yordam_42" target="_blank" rel="noreferrer" className="text-xs text-indigo-500 hover:text-indigo-700">
+              @yordam_42
+            </a>
+            <span className="mx-2 text-gray-300">|</span>
+            <a href="https://t.me/pythonnews_uzbekistan" target="_blank" rel="noreferrer" className="text-xs text-indigo-500 hover:text-indigo-700">
+              @pythonnews_uzbekistan
+            </a>
+          </div>
+        </div>
       </main>
     </div>
   );
