@@ -49,24 +49,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Check if token is expired and needs refresh
         const tokenExpiry = localStorage.getItem("token_expiry");
         if (tokenExpiry && new Date(tokenExpiry) <= new Date()) {
-          const refreshData = await refreshToken(localStorage.getItem("refresh_token") || "");
-          localStorage.setItem("jwt_token", refreshData.access);
-          localStorage.setItem("refresh_token", refreshData.refresh);
-          
-          // Set new expiry (typically 1 hour from now)
-          const expiryDate = new Date();
-          expiryDate.setHours(expiryDate.getHours() + 1);
-          localStorage.setItem("token_expiry", expiryDate.toISOString());
+          try {
+            const refreshData = await refreshToken(localStorage.getItem("refresh_token") || "");
+            localStorage.setItem("jwt_token", refreshData.access);
+            localStorage.setItem("refresh_token", refreshData.refresh);
+            
+            // Set new expiry (typically 1 hour from now)
+            const expiryDate = new Date();
+            expiryDate.setHours(expiryDate.getHours() + 1);
+            localStorage.setItem("token_expiry", expiryDate.toISOString());
+          } catch (refreshError) {
+            console.error("Failed to refresh token:", refreshError);
+            localStorage.removeItem("jwt_token");
+            localStorage.removeItem("refresh_token");
+            localStorage.removeItem("token_expiry");
+            setIsLoading(false);
+            return;
+          }
         }
 
-        const userData = await getCurrentUser();
-        setUser(userData);
-        setIsAuthenticated(true);
+        try {
+          const userData = await getCurrentUser();
+          setUser(userData);
+          setIsAuthenticated(true);
+        } catch (userError) {
+          console.error("Failed to fetch user data:", userError);
+          localStorage.removeItem("jwt_token");
+          localStorage.removeItem("refresh_token");
+          localStorage.removeItem("token_expiry");
+        }
       } catch (error) {
-        console.error("Failed to fetch user:", error);
-        localStorage.removeItem("jwt_token");
-        localStorage.removeItem("refresh_token");
-        localStorage.removeItem("token_expiry");
+        console.error("Authentication error:", error);
       } finally {
         setIsLoading(false);
       }
@@ -106,6 +119,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         navigate("/");
       }
     } catch (error: any) {
+      console.error("Login error:", error);
       setError(error.response?.data?.detail || "Login xatosi yuz berdi");
       toast({
         title: "Xatolik!",
@@ -131,6 +145,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       navigate("/login");
     } catch (error: any) {
+      console.error("Registration error:", error);
       setError(error.response?.data?.detail || "Ro'yxatdan o'tishda xatolik yuz berdi");
       toast({
         title: "Xatolik!",

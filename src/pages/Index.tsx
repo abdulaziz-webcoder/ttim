@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BookOpen, Trophy, TrendingUp, Clock, Star, Target } from "lucide-react";
+import { BookOpen, Trophy, TrendingUp, Clock, Star, Target, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from '@tanstack/react-query';
 import { getStudentTests, getStudentStatistics } from '@/services/api';
@@ -13,6 +13,7 @@ import StatisticsCard from "@/components/StatisticsCard";
 import GradeChart from "@/components/GradeChart";
 import ContactSection from "@/components/ContactSection";
 import { useAuth } from '@/contexts/AuthContext';
+import { Link } from 'react-router-dom';
 
 // Define interfaces for API data
 interface TestData {
@@ -36,26 +37,46 @@ interface StatisticsData {
   class_average?: number;
 }
 
-interface SubjectScore {
-  [key: string]: number;
-}
-
 const Index = () => {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [isVisible, setIsVisible] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
 
-  // Fetch student tests
-  const { data: testsData, isLoading: isLoadingTests } = useQuery({
+  // Fetch student tests with proper error handling
+  const { 
+    data: testsData, 
+    isLoading: isLoadingTests,
+    error: testsError
+  } = useQuery({
     queryKey: ['student-tests'],
     queryFn: getStudentTests,
+    onError: (error: any) => {
+      console.error('Failed to fetch tests:', error);
+      toast({
+        title: "Xatolik!",
+        description: "Testlarni yuklashda muammo yuzaga keldi. Qayta urinib ko'ring.",
+        variant: "destructive",
+      });
+    }
   });
 
-  // Fetch student statistics
-  const { data: statisticsData, isLoading: isLoadingStats } = useQuery({
+  // Fetch student statistics with proper error handling
+  const { 
+    data: statisticsData, 
+    isLoading: isLoadingStats,
+    error: statsError 
+  } = useQuery({
     queryKey: ['student-statistics'],
     queryFn: getStudentStatistics,
+    onError: (error: any) => {
+      console.error('Failed to fetch statistics:', error);
+      toast({
+        title: "Xatolik!",
+        description: "Statistikani yuklashda muammo yuzaga keldi. Qayta urinib ko'ring.",
+        variant: "destructive",
+      });
+    }
   });
 
   // Transform API data for our components
@@ -69,7 +90,7 @@ const Index = () => {
     date: new Date(test.created_at).toLocaleDateString(),
   })) : [];
 
-  // Until we have real data, use placeholder stats
+  // Use data from API or fallbacks
   const studentStats: StatisticsData = statisticsData ? {
     totalTests: statisticsData.total_tests,
     completedTests: statisticsData.completed_tests,
@@ -98,6 +119,30 @@ const Index = () => {
       });
     }, 1000);
   }, [toast]);
+
+  // Handle critical errors
+  if (testsError && statsError) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-blue-50">
+        <Navigation />
+        <div className="container mx-auto px-4 py-20 text-center">
+          <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <AlertCircle className="w-10 h-10 text-red-500" />
+          </div>
+          <h2 className="text-3xl font-bold text-gray-800 mb-4">Ma'lumotlarni yuklashda xatolik</h2>
+          <p className="text-gray-600 mb-8 max-w-md mx-auto">
+            Server bilan bog'lanishda muammo yuzaga keldi. Internet aloqangizni tekshirib, qayta urinib ko'ring.
+          </p>
+          <Button 
+            onClick={() => window.location.reload()} 
+            className="bg-gradient-to-r from-indigo-600 to-purple-600"
+          >
+            Qayta urinib ko'rish
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   // Loading state
   if (isLoadingTests || isLoadingStats) {
@@ -141,6 +186,18 @@ const Index = () => {
           <p className="text-xl text-gray-600 max-w-2xl mx-auto animate-fade-in delay-300">
             Real vaqt tahlillari, shaxsiy ko'rsatkichlar va zamonaviy o'quv tajribasi bilan ilg'or test platformasi
           </p>
+          {user && (
+            <div className="mt-6 animate-fade-in delay-500">
+              <Button 
+                className="bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-700 hover:to-teal-700 text-white font-medium px-8 py-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300"
+                asChild
+              >
+                <Link to={user.role === "teacher" || user.role === "admin" ? "/teacher" : "#tests"}>
+                  {user.role === "teacher" || user.role === "admin" ? "Testlarni boshqarish" : "Testlarni boshlash"}
+                </Link>
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* Main Content */}
@@ -227,7 +284,7 @@ const Index = () => {
           </TabsContent>
 
           {/* Tests Tab */}
-          <TabsContent value="tests" className="space-y-6">
+          <TabsContent value="tests" className="space-y-6" id="tests">
             {transformedTests.length > 0 ? (
               <div className="grid gap-6">
                 {transformedTests.map((test, index) => (
@@ -326,16 +383,19 @@ const Index = () => {
         
         {/* Footer */}
         <div className="mt-20 text-center">
-          <div className="flex items-center justify-center gap-2 text-gray-500 text-sm">
-            <span>Made with</span>
-            <div className="flex items-center">
-              <span className="inline-block bg-gradient-to-r from-green-600 to-green-700 text-white px-1 rounded text-xs">Django</span>
+          <div className="flex items-center justify-center gap-2 text-gray-500 text-sm mb-3">
+            <span>Yaratilgan</span>
+            <div className="flex items-center gap-1">
+              <span className="inline-block bg-gradient-to-r from-green-600 to-green-700 text-white px-2 py-0.5 rounded text-xs font-mono">Django</span>
               <span className="mx-1">+</span>
-              <span className="inline-block bg-gradient-to-r from-blue-600 to-blue-700 text-white px-1 rounded text-xs">React</span>
+              <span className="inline-block bg-gradient-to-r from-blue-600 to-blue-700 text-white px-2 py-0.5 rounded text-xs font-mono">React</span>
             </div>
-            <span>with ❤️ by Abdulaziz</span>
+            <span className="flex items-center">
+              <span className="mx-1">❤️</span> 
+              <span>Abdulaziz tomonidan</span>
+            </span>
           </div>
-          <div className="mt-2">
+          <div>
             <a href="https://t.me/yordam_42" target="_blank" rel="noreferrer" className="text-xs text-indigo-500 hover:text-indigo-700">
               @yordam_42
             </a>
