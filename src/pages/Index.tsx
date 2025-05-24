@@ -86,27 +86,54 @@ const Index = () => {
     }
   }, [statsError, toast]);
 
-  // Transform API data for our components with proper null checks
-  const transformedTests: TestData[] = testsData ? testsData.map((test: any) => ({
-    id: test.id,
-    title: test.title || 'Nomsiz test',
-    subject: test.subject || 'Fan ko\'rsatilmagan',
-    score: test.score,
-    maxScore: test.max_score || 100,
-    status: test.status ? test.status.toLowerCase() : 'available',
-    date: test.created_at ? new Date(test.created_at).toLocaleDateString() : new Date().toLocaleDateString(),
-  })) : [];
+  // Transform API data for our components with comprehensive null checks
+  const transformedTests: TestData[] = testsData && Array.isArray(testsData) ? testsData.map((test: any, index: number) => {
+    console.log(`Processing test ${index}:`, test);
+    
+    // Ensure we have a valid test object
+    if (!test || typeof test !== 'object') {
+      console.warn(`Invalid test object at index ${index}:`, test);
+      return {
+        id: index,
+        title: 'Noto\'g\'ri test ma\'lumoti',
+        subject: 'Noma\'lum',
+        score: null,
+        maxScore: 100,
+        status: 'available' as const,
+        date: new Date().toLocaleDateString(),
+      };
+    }
+
+    // Safe status processing
+    let safeStatus: 'completed' | 'available' | 'upcoming' = 'available';
+    if (test.status && typeof test.status === 'string') {
+      const statusLower = test.status.toLowerCase();
+      if (['completed', 'available', 'upcoming'].includes(statusLower)) {
+        safeStatus = statusLower as 'completed' | 'available' | 'upcoming';
+      }
+    }
+
+    return {
+      id: test.id || index,
+      title: (test.title && typeof test.title === 'string') ? test.title : 'Nomsiz test',
+      subject: (test.subject && typeof test.subject === 'string') ? test.subject : 'Fan ko\'rsatilmagan',
+      score: typeof test.score === 'number' ? test.score : null,
+      maxScore: (typeof test.max_score === 'number' && test.max_score > 0) ? test.max_score : 100,
+      status: safeStatus,
+      date: test.created_at ? new Date(test.created_at).toLocaleDateString() : new Date().toLocaleDateString(),
+    };
+  }) : [];
 
   // Use data from API or fallbacks
-  const studentStats: StatisticsData = statisticsData ? {
-    totalTests: statisticsData.total_tests || 0,
-    completedTests: statisticsData.completed_tests || 0,
-    averageScore: statisticsData.average_score || 0,
-    rank: statisticsData.rank || 0,
-    totalStudents: statisticsData.total_students || 0,
-    subject_scores: statisticsData.subject_scores,
+  const studentStats: StatisticsData = statisticsData && typeof statisticsData === 'object' ? {
+    totalTests: (typeof statisticsData.total_tests === 'number') ? statisticsData.total_tests : 0,
+    completedTests: (typeof statisticsData.completed_tests === 'number') ? statisticsData.completed_tests : 0,
+    averageScore: (typeof statisticsData.average_score === 'number') ? statisticsData.average_score : 0,
+    rank: (typeof statisticsData.rank === 'number') ? statisticsData.rank : 0,
+    totalStudents: (typeof statisticsData.total_students === 'number') ? statisticsData.total_students : 0,
+    subject_scores: statisticsData.subject_scores && typeof statisticsData.subject_scores === 'object' ? statisticsData.subject_scores : undefined,
     current_grade: statisticsData.current_grade,
-    class_average: statisticsData.class_average
+    class_average: (typeof statisticsData.class_average === 'number') ? statisticsData.class_average : undefined
   } : {
     totalTests: 0,
     completedTests: 0,
