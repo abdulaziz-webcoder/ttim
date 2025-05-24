@@ -31,6 +31,13 @@ interface StatisticsData {
   averageScore: number;
   rank: number;
   totalStudents: number;
+  subject_scores?: Record<string, number>;
+  current_grade?: string | number;
+  class_average?: number;
+}
+
+interface SubjectScore {
+  [key: string]: number;
 }
 
 const Index = () => {
@@ -69,6 +76,9 @@ const Index = () => {
     averageScore: statisticsData.average_score,
     rank: statisticsData.rank,
     totalStudents: statisticsData.total_students,
+    subject_scores: statisticsData.subject_scores,
+    current_grade: statisticsData.current_grade,
+    class_average: statisticsData.class_average
   } : {
     totalTests: 0,
     completedTests: 0,
@@ -248,9 +258,9 @@ const Index = () => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {statisticsData?.subject_scores ? (
+                  {studentStats.subject_scores && Object.keys(studentStats.subject_scores).length > 0 ? (
                     <div className="space-y-4">
-                      {Object.entries(statisticsData.subject_scores).map(([subject, score]) => (
+                      {Object.entries(studentStats.subject_scores).map(([subject, score]) => (
                         <div key={subject}>
                           <div className="flex justify-between mb-2">
                             <span className="text-sm font-medium">{subject}</span>
@@ -288,13 +298,13 @@ const Index = () => {
                     <div className="grid grid-cols-2 gap-4 text-center">
                       <div className="p-4 bg-white/80 rounded-xl shadow-lg border border-white/30 backdrop-blur-sm">
                         <div className="text-xl font-semibold text-green-600">
-                          {statisticsData?.current_grade || '-'}
+                          {studentStats.current_grade || '-'}
                         </div>
                         <div className="text-xs text-gray-600">Hozirgi baho</div>
                       </div>
                       <div className="p-4 bg-white/80 rounded-xl shadow-lg border border-white/30 backdrop-blur-sm">
                         <div className="text-xl font-semibold text-indigo-600">
-                          {statisticsData?.class_average || '-'}%
+                          {studentStats.class_average || '-'}%
                         </div>
                         <div className="text-xs text-gray-600">Sinf o'rtachasi</div>
                       </div>
