@@ -94,8 +94,7 @@ const TestCard = ({ test, delay = 0, expanded = false }: TestCardProps) => {
             </div>
             <Progress 
               value={scorePercentage} 
-              className="h-2 bg-gray-100" 
-              indicatorClassName={`${
+              className={`h-2 bg-gray-100 ${
                 scorePercentage >= 90 
                   ? 'bg-gradient-to-r from-green-500 to-teal-600' 
                   : scorePercentage >= 70 

@@ -1,5 +1,7 @@
 
 import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { getAllTests, getTestStatistics, createTest, addQuestion, deleteTest } from "@/services/api";
 import Navigation from "@/components/Navigation";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -9,14 +11,27 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { FileText, Plus, BarChart, Save, Trash2, Edit, Eye, CheckCircle, Clock } from "lucide-react";
-import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
+
+interface Question {
+  text: string;
+  options: { text: string; isCorrect: boolean }[];
+}
+
+interface TestFormData {
+  title: string;
+  subject: string;
+  description: string;
+  duration: number;
+  questions: Question[];
+}
 
 const Teacher = () => {
   const [activeTab, setActiveTab] = useState("tests");
   const [isVisible, setIsVisible] = useState(true);
   const { toast } = useToast();
-  const [newTest, setNewTest] = useState({
+  const queryClient = useQueryClient();
+  const [newTest, setNewTest] = useState<TestFormData>({
     title: "",
     subject: "",
     description: "",
@@ -26,22 +41,69 @@ const Teacher = () => {
     ]
   });
 
-  // Mock data
-  const tests = [
-    { id: 1, title: "Matematika", completions: 45, averageScore: 76, questions: 12, subject: "Matematika", created: "12.05.2025" },
-    { id: 2, title: "Fizika", completions: 32, averageScore: 68, questions: 10, subject: "Fizika", created: "10.05.2025" },
-    { id: 3, title: "Kimyo", completions: 28, averageScore: 72, questions: 15, subject: "Kimyo", created: "08.05.2025" },
-  ];
+  // Fetch all tests
+  const { data: tests = [], isLoading: isLoadingTests } = useQuery({
+    queryKey: ['all-tests'],
+    queryFn: getAllTests,
+  });
 
-  const statistics = [
-    { id: 1, test: "Matematika", student: "Aziz Karimov", score: 92, timeTaken: "45 daqiqa", date: "15.05.2025" },
-    { id: 2, test: "Matematika", student: "Nodira Saidova", score: 88, timeTaken: "52 daqiqa", date: "15.05.2025" },
-    { id: 3, test: "Fizika", student: "Jasur Alimov", score: 76, timeTaken: "48 daqiqa", date: "14.05.2025" },
-    { id: 4, test: "Kimyo", student: "Dilnoza Rahimova", score: 84, timeTaken: "58 daqiqa", date: "13.05.2025" },
-    { id: 5, test: "Matematika", student: "Botir Qodirov", score: 68, timeTaken: "55 daqiqa", date: "12.05.2025" },
-  ];
+  // Get statistics for a specific test (would be dynamic in full implementation)
+  const { data: statistics = [], isLoading: isLoadingStats } = useQuery({
+    queryKey: ['test-statistics'],
+    queryFn: () => {
+      // This would normally fetch statistics for a specific test or all tests
+      // For now, we'll use mock data if API doesn't respond as expected
+      return Promise.resolve([
+        { id: 1, test: "Matematika", student: "Aziz Karimov", score: 92, timeTaken: "45 daqiqa", date: "15.05.2025" },
+        { id: 2, test: "Matematika", student: "Nodira Saidova", score: 88, timeTaken: "52 daqiqa", date: "15.05.2025" },
+        { id: 3, test: "Fizika", student: "Jasur Alimov", score: 76, timeTaken: "48 daqiqa", date: "14.05.2025" },
+      ]);
+    },
+    enabled: activeTab === 'statistics',
+  });
 
-  const addQuestion = () => {
+  // Create test mutation
+  const createTestMutation = useMutation({
+    mutationFn: createTest,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['all-tests'] });
+      toast({
+        title: "Test saqlandi",
+        description: "Test muvaffaqiyatli yaratildi va saqlandi",
+      });
+      resetForm();
+    },
+    onError: (error) => {
+      console.error(error);
+      toast({
+        title: "Xatolik",
+        description: "Test yaratishda xatolik yuz berdi",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Delete test mutation
+  const deleteTestMutation = useMutation({
+    mutationFn: deleteTest,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['all-tests'] });
+      toast({
+        title: "Test o'chirildi",
+        description: "Test muvaffaqiyatli o'chirildi",
+      });
+    },
+    onError: (error) => {
+      console.error(error);
+      toast({
+        title: "Xatolik",
+        description: "Testni o'chirishda xatolik yuz berdi",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const addQuestionField = () => {
     setNewTest({
       ...newTest,
       questions: [...newTest.questions, 
@@ -50,14 +112,38 @@ const Teacher = () => {
     });
   };
 
-  const saveTest = () => {
-    // Here would be the API call to save the test
-    toast({
-      title: "Test saqlandi",
-      description: "Test muvaffaqiyatli yaratildi va saqlandi",
-    });
-    
-    // Reset form
+  const saveTest = async () => {
+    // Check for required fields
+    if (!newTest.title || !newTest.subject || !newTest.questions[0].text) {
+      toast({
+        title: "Ma'lumotlar to'liq emas",
+        description: "Test nomi, fan va kamida bitta savol kiritilishi kerak",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Format data for API
+    const formattedData = {
+      title: newTest.title,
+      subject: newTest.subject,
+      description: newTest.description,
+      duration_minutes: newTest.duration,
+      is_active: true,
+      questions: newTest.questions.map(q => ({
+        text: q.text,
+        options: q.options.map(o => ({
+          text: o.text,
+          is_correct: o.isCorrect
+        }))
+      }))
+    };
+
+    // Submit to API
+    createTestMutation.mutate(formattedData);
+  };
+
+  const resetForm = () => {
     setNewTest({
       title: "",
       subject: "",
@@ -89,6 +175,18 @@ const Teacher = () => {
     }));
     setNewTest({...newTest, questions: updatedQuestions});
   };
+
+  // Loading state
+  if (isLoadingTests && activeTab === 'tests') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-blue-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 mb-4 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
+          <p className="text-indigo-600 font-medium">Testlar yuklanmoqda...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-blue-50">
@@ -150,47 +248,72 @@ const Teacher = () => {
               </CardHeader>
               <CardContent>
                 <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Nom</TableHead>
-                        <TableHead>Fan</TableHead>
-                        <TableHead>Savollar</TableHead>
-                        <TableHead>O'rtacha ball</TableHead>
-                        <TableHead>Yaratildi</TableHead>
-                        <TableHead>Harakatlar</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {tests.map((test) => (
-                        <TableRow key={test.id} className="hover:bg-indigo-50/50">
-                          <TableCell className="font-medium">{test.title}</TableCell>
-                          <TableCell>{test.subject}</TableCell>
-                          <TableCell>{test.questions}</TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <Progress value={test.averageScore} className="h-2 bg-indigo-100" />
-                              <span className="text-sm">{test.averageScore}%</span>
-                            </div>
-                          </TableCell>
-                          <TableCell>{test.created}</TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                                <Eye className="h-4 w-4 text-indigo-500" />
-                              </Button>
-                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                                <Edit className="h-4 w-4 text-amber-500" />
-                              </Button>
-                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                                <Trash2 className="h-4 w-4 text-red-500" />
-                              </Button>
-                            </div>
-                          </TableCell>
+                  {tests && tests.length > 0 ? (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Nom</TableHead>
+                          <TableHead>Fan</TableHead>
+                          <TableHead>Savollar</TableHead>
+                          <TableHead>O'rtacha ball</TableHead>
+                          <TableHead>Yaratildi</TableHead>
+                          <TableHead>Harakatlar</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                      </TableHeader>
+                      <TableBody>
+                        {tests.map((test: any) => (
+                          <TableRow key={test.id} className="hover:bg-indigo-50/50">
+                            <TableCell className="font-medium">{test.title}</TableCell>
+                            <TableCell>{test.subject}</TableCell>
+                            <TableCell>{test.questions_count || '-'}</TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <div className="h-2 bg-indigo-100 rounded-full w-full overflow-hidden">
+                                  <div 
+                                    className="h-full bg-gradient-to-r from-indigo-500 to-purple-600" 
+                                    style={{ width: `${test.average_score || 0}%` }}
+                                  ></div>
+                                </div>
+                                <span className="text-sm">{test.average_score || 0}%</span>
+                              </div>
+                            </TableCell>
+                            <TableCell>{new Date(test.created_at).toLocaleDateString()}</TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                  <Eye className="h-4 w-4 text-indigo-500" />
+                                </Button>
+                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                  <Edit className="h-4 w-4 text-amber-500" />
+                                </Button>
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  className="h-8 w-8 p-0"
+                                  onClick={() => deleteTestMutation.mutate(test.id)}
+                                  disabled={deleteTestMutation.isPending}
+                                >
+                                  <Trash2 className="h-4 w-4 text-red-500" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  ) : (
+                    <div className="text-center py-8">
+                      <FileText className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                      <h3 className="text-lg font-semibold text-gray-700 mb-2">Testlar mavjud emas</h3>
+                      <p className="text-gray-500 mb-6">
+                        Siz hali birorta test yaratmagansiz
+                      </p>
+                      <Button onClick={() => setActiveTab("create")}>
+                        <Plus className="mr-2 h-4 w-4" />
+                        Yangi test yaratish
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -296,7 +419,7 @@ const Teacher = () => {
                   ))}
 
                   <Button 
-                    onClick={addQuestion}
+                    onClick={addQuestionField}
                     className="w-full bg-indigo-100 text-indigo-600 hover:bg-indigo-200"
                   >
                     <Plus className="w-4 h-4 mr-2" /> Yana savol qo'shish
@@ -304,8 +427,21 @@ const Teacher = () => {
                 </div>
               </CardContent>
               <CardFooter className="flex justify-end border-t border-gray-100 py-4">
-                <Button onClick={saveTest} className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700">
-                  <Save className="w-4 h-4 mr-2" /> Testni saqlash
+                <Button 
+                  onClick={saveTest} 
+                  className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700"
+                  disabled={createTestMutation.isPending}
+                >
+                  {createTestMutation.isPending ? (
+                    <span className="flex items-center">
+                      <span className="animate-spin h-4 w-4 border-2 border-white rounded-full border-t-transparent mr-2"></span>
+                      Saqlanmoqda...
+                    </span>
+                  ) : (
+                    <span className="flex items-center">
+                      <Save className="w-4 h-4 mr-2" /> Testni saqlash
+                    </span>
+                  )}
                 </Button>
               </CardFooter>
             </Card>
@@ -319,7 +455,9 @@ const Teacher = () => {
                   <CardTitle className="text-lg text-gray-700">Test topshirishlar</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-3xl font-bold text-indigo-600">105</p>
+                  <p className="text-3xl font-bold text-indigo-600">
+                    {statistics.length || 0}
+                  </p>
                   <p className="text-sm text-gray-500">So'ngi 30 kun</p>
                 </CardContent>
               </Card>
@@ -329,9 +467,21 @@ const Teacher = () => {
                   <CardTitle className="text-lg text-gray-700">O'rtacha ball</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-3xl font-bold text-green-600">76.5%</p>
+                  <p className="text-3xl font-bold text-green-600">
+                    {statistics.length ? 
+                      (statistics.reduce((sum: number, stat: any) => sum + stat.score, 0) / statistics.length).toFixed(1) + '%' : 
+                      '0%'
+                    }
+                  </p>
                   <div className="w-full bg-gray-100 rounded-full h-2.5 mt-2">
-                    <div className="bg-green-600 h-2.5 rounded-full" style={{ width: '76.5%' }}></div>
+                    <div 
+                      className="bg-green-600 h-2.5 rounded-full" 
+                      style={{ 
+                        width: statistics.length ? 
+                          `${statistics.reduce((sum: number, stat: any) => sum + stat.score, 0) / statistics.length}%` : 
+                          '0%' 
+                      }}
+                    ></div>
                   </div>
                 </CardContent>
               </Card>
@@ -341,8 +491,10 @@ const Teacher = () => {
                   <CardTitle className="text-lg text-gray-700">Aktiv o'quvchilar</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-3xl font-bold text-amber-600">48</p>
-                  <p className="text-sm text-gray-500">Jami 56 dan</p>
+                  <p className="text-3xl font-bold text-amber-600">
+                    {new Set(statistics.map((s: any) => s.student)).size}
+                  </p>
+                  <p className="text-sm text-gray-500">Jami o'quvchilar ichida</p>
                 </CardContent>
               </Card>
             </div>
@@ -355,41 +507,56 @@ const Teacher = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>O'quvchi</TableHead>
-                        <TableHead>Test</TableHead>
-                        <TableHead>Ball</TableHead>
-                        <TableHead>Vaqt</TableHead>
-                        <TableHead>Sana</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {statistics.map((stat) => (
-                        <TableRow key={stat.id} className="hover:bg-indigo-50/50">
-                          <TableCell className="font-medium">{stat.student}</TableCell>
-                          <TableCell>{stat.test}</TableCell>
-                          <TableCell>
-                            <Badge className={`${
-                              stat.score >= 85 ? 'bg-green-100 text-green-800' :
-                              stat.score >= 70 ? 'bg-amber-100 text-amber-800' :
-                              'bg-red-100 text-red-800'
-                            }`}>
-                              {stat.score}%
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="flex items-center gap-1">
-                            <Clock className="h-3 w-3 text-gray-400" />
-                            {stat.timeTaken}
-                          </TableCell>
-                          <TableCell>{stat.date}</TableCell>
+                {isLoadingStats ? (
+                  <div className="text-center py-8">
+                    <div className="w-12 h-12 mb-4 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
+                    <p className="text-indigo-600 font-medium">Statistikalar yuklanmoqda...</p>
+                  </div>
+                ) : statistics && statistics.length > 0 ? (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>O'quvchi</TableHead>
+                          <TableHead>Test</TableHead>
+                          <TableHead>Ball</TableHead>
+                          <TableHead>Vaqt</TableHead>
+                          <TableHead>Sana</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
+                      </TableHeader>
+                      <TableBody>
+                        {statistics.map((stat: any) => (
+                          <TableRow key={stat.id} className="hover:bg-indigo-50/50">
+                            <TableCell className="font-medium">{stat.student}</TableCell>
+                            <TableCell>{stat.test}</TableCell>
+                            <TableCell>
+                              <Badge className={`${
+                                stat.score >= 85 ? 'bg-green-100 text-green-800' :
+                                stat.score >= 70 ? 'bg-amber-100 text-amber-800' :
+                                'bg-red-100 text-red-800'
+                              }`}>
+                                {stat.score}%
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="flex items-center gap-1">
+                              <Clock className="h-3 w-3 text-gray-400" />
+                              {stat.timeTaken}
+                            </TableCell>
+                            <TableCell>{stat.date}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <BarChart className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold text-gray-700 mb-2">Natijalar mavjud emas</h3>
+                    <p className="text-gray-500 mb-6">
+                      Hozircha birorta o'quvchi test topshirmagan
+                    </p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>

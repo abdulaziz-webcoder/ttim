@@ -2,21 +2,80 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BookOpen, Trophy, TrendingUp, Clock, Star, Users, Target, Award, MessageCircle, Send } from "lucide-react";
+import { BookOpen, Trophy, TrendingUp, Clock, Star, Target } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useQuery } from '@tanstack/react-query';
+import { getStudentTests, getStudentStatistics } from '@/services/api';
 import Navigation from "@/components/Navigation";
 import TestCard from "@/components/TestCard";
 import StatisticsCard from "@/components/StatisticsCard";
 import GradeChart from "@/components/GradeChart";
 import ContactSection from "@/components/ContactSection";
+import { useAuth } from '@/contexts/AuthContext';
+
+// Define interfaces for API data
+interface TestData {
+  id: number;
+  title: string;
+  subject: string;
+  score: number | null;
+  maxScore: number;
+  status: 'completed' | 'available' | 'upcoming';
+  date: string;
+}
+
+interface StatisticsData {
+  totalTests: number;
+  completedTests: number;
+  averageScore: number;
+  rank: number;
+  totalStudents: number;
+}
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [isVisible, setIsVisible] = useState(false);
   const { toast } = useToast();
+  const { user } = useAuth();
+
+  // Fetch student tests
+  const { data: testsData, isLoading: isLoadingTests } = useQuery({
+    queryKey: ['student-tests'],
+    queryFn: getStudentTests,
+  });
+
+  // Fetch student statistics
+  const { data: statisticsData, isLoading: isLoadingStats } = useQuery({
+    queryKey: ['student-statistics'],
+    queryFn: getStudentStatistics,
+  });
+
+  // Transform API data for our components
+  const transformedTests: TestData[] = testsData ? testsData.map((test: any) => ({
+    id: test.id,
+    title: test.title,
+    subject: test.subject,
+    score: test.score,
+    maxScore: test.max_score || 100,
+    status: test.status.toLowerCase(),
+    date: new Date(test.created_at).toLocaleDateString(),
+  })) : [];
+
+  // Until we have real data, use placeholder stats
+  const studentStats: StatisticsData = statisticsData ? {
+    totalTests: statisticsData.total_tests,
+    completedTests: statisticsData.completed_tests,
+    averageScore: statisticsData.average_score,
+    rank: statisticsData.rank,
+    totalStudents: statisticsData.total_students,
+  } : {
+    totalTests: 0,
+    completedTests: 0,
+    averageScore: 0,
+    rank: 0,
+    totalStudents: 0,
+  };
 
   useEffect(() => {
     setIsVisible(true);
@@ -30,21 +89,17 @@ const Index = () => {
     }, 1000);
   }, [toast]);
 
-  // Mock data for demonstration
-  const studentStats = {
-    totalTests: 24,
-    completedTests: 18,
-    averageScore: 87.5,
-    rank: 3,
-    totalStudents: 156
-  };
-
-  const recentTests = [
-    { id: 1, title: "Matematika test", subject: "Matematika", score: 92, maxScore: 100, status: "completed" as const, date: "2025-01-20" },
-    { id: 2, title: "Fizika 5-bob", subject: "Fizika", score: 85, maxScore: 100, status: "completed" as const, date: "2025-01-18" },
-    { id: 3, title: "Kimyo laboratoria", subject: "Kimyo", score: null, maxScore: 100, status: "available" as const, date: "2025-01-25" },
-    { id: 4, title: "Biologiya evolyutsiya", subject: "Biologiya", score: null, maxScore: 100, status: "upcoming" as const, date: "2025-01-28" }
-  ];
+  // Loading state
+  if (isLoadingTests || isLoadingStats) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-blue-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 mb-4 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
+          <p className="text-indigo-600 font-medium">Ma'lumotlar yuklanmoqda...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-blue-50">
@@ -94,7 +149,7 @@ const Index = () => {
               Statistika
             </TabsTrigger>
             <TabsTrigger value="grades" className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-indigo-500 data-[state=active]:to-purple-600 data-[state=active]:text-white transition-all duration-300">
-              <Award className="w-4 h-4" />
+              <Star className="w-4 h-4" />
               Baholar
             </TabsTrigger>
           </TabsList>
@@ -127,7 +182,7 @@ const Index = () => {
               <StatisticsCard
                 title="Sinf reytingi"
                 value={`#${studentStats.rank}`}
-                icon={Award}
+                icon={Trophy}
                 color="from-purple-500 to-fuchsia-600"
                 delay={300}
               />
@@ -142,22 +197,44 @@ const Index = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid gap-4">
-                  {recentTests.map((test, index) => (
-                    <TestCard key={test.id} test={test} delay={index * 100} />
-                  ))}
-                </div>
+                {transformedTests.length > 0 ? (
+                  <div className="grid gap-4">
+                    {transformedTests.slice(0, 4).map((test, index) => (
+                      <TestCard key={test.id} test={test} delay={index * 100} />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <p className="text-gray-500">Hozircha testlar mavjud emas</p>
+                    <Button className="mt-4">
+                      <BookOpen className="mr-2 h-4 w-4" />
+                      Test topish
+                    </Button>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
 
           {/* Tests Tab */}
           <TabsContent value="tests" className="space-y-6">
-            <div className="grid gap-6">
-              {recentTests.map((test, index) => (
-                <TestCard key={test.id} test={test} delay={index * 100} expanded />
-              ))}
-            </div>
+            {transformedTests.length > 0 ? (
+              <div className="grid gap-6">
+                {transformedTests.map((test, index) => (
+                  <TestCard key={test.id} test={test} delay={index * 100} expanded />
+                ))}
+              </div>
+            ) : (
+              <Card className="bg-white/90 backdrop-blur-md shadow-xl border border-white/30 rounded-xl p-8 text-center">
+                <div className="flex flex-col items-center">
+                  <BookOpen className="h-12 w-12 text-gray-300 mb-4" />
+                  <h3 className="text-xl font-semibold text-gray-700 mb-2">Testlar mavjud emas</h3>
+                  <p className="text-gray-500 mb-6">
+                    Hozircha sizga mo'ljallangan testlar mavjud emas.
+                  </p>
+                </div>
+              </Card>
+            )}
           </TabsContent>
 
           {/* Statistics Tab */}
@@ -171,60 +248,54 @@ const Index = () => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
-                    <div>
-                      <div className="flex justify-between mb-2">
-                        <span className="text-sm font-medium">Matematika</span>
-                        <span className="text-sm text-gray-600">92%</span>
-                      </div>
-                      <Progress value={92} className="h-2 bg-indigo-100" />
+                  {statisticsData?.subject_scores ? (
+                    <div className="space-y-4">
+                      {Object.entries(statisticsData.subject_scores).map(([subject, score]) => (
+                        <div key={subject}>
+                          <div className="flex justify-between mb-2">
+                            <span className="text-sm font-medium">{subject}</span>
+                            <span className="text-sm text-gray-600">{score}%</span>
+                          </div>
+                          <div className="h-2 bg-indigo-100 rounded-full overflow-hidden">
+                            <div 
+                              className="h-full bg-gradient-to-r from-indigo-500 to-purple-600" 
+                              style={{ width: `${score}%` }}
+                            ></div>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                    <div>
-                      <div className="flex justify-between mb-2">
-                        <span className="text-sm font-medium">Fizika</span>
-                        <span className="text-sm text-gray-600">85%</span>
-                      </div>
-                      <Progress value={85} className="h-2 bg-indigo-100" />
-                    </div>
-                    <div>
-                      <div className="flex justify-between mb-2">
-                        <span className="text-sm font-medium">Kimyo</span>
-                        <span className="text-sm text-gray-600">78%</span>
-                      </div>
-                      <Progress value={78} className="h-2 bg-indigo-100" />
-                    </div>
-                    <div>
-                      <div className="flex justify-between mb-2">
-                        <span className="text-sm font-medium">Biologiya</span>
-                        <span className="text-sm text-gray-600">88%</span>
-                      </div>
-                      <Progress value={88} className="h-2 bg-indigo-100" />
-                    </div>
-                  </div>
+                  ) : (
+                    <p className="text-center py-4 text-gray-500">Ma'lumotlar hali mavjud emas</p>
+                  )}
                 </CardContent>
               </Card>
 
               <Card className="bg-white/90 backdrop-blur-md shadow-2xl border border-white/30 rounded-2xl">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-                    <Users className="w-5 h-5 text-purple-500" />
+                    <Trophy className="w-5 h-5 text-purple-500" />
                     Sinf statistikasi
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-6">
                     <div className="text-center">
-                      <div className="text-3xl font-bold text-purple-600 mb-2">#3</div>
+                      <div className="text-3xl font-bold text-purple-600 mb-2">#{studentStats.rank || '-'}</div>
                       <div className="text-sm text-gray-600">Sizning reytingingiz</div>
-                      <div className="text-xs text-gray-500 mt-1">{studentStats.totalStudents} o'quvchi ichida</div>
+                      <div className="text-xs text-gray-500 mt-1">{studentStats.totalStudents || '-'} o'quvchi ichida</div>
                     </div>
                     <div className="grid grid-cols-2 gap-4 text-center">
                       <div className="p-4 bg-white/80 rounded-xl shadow-lg border border-white/30 backdrop-blur-sm">
-                        <div className="text-xl font-semibold text-green-600">A+</div>
+                        <div className="text-xl font-semibold text-green-600">
+                          {statisticsData?.current_grade || '-'}
+                        </div>
                         <div className="text-xs text-gray-600">Hozirgi baho</div>
                       </div>
                       <div className="p-4 bg-white/80 rounded-xl shadow-lg border border-white/30 backdrop-blur-sm">
-                        <div className="text-xl font-semibold text-indigo-600">87.5%</div>
+                        <div className="text-xl font-semibold text-indigo-600">
+                          {statisticsData?.class_average || '-'}%
+                        </div>
                         <div className="text-xs text-gray-600">Sinf o'rtachasi</div>
                       </div>
                     </div>
