@@ -3,10 +3,11 @@ import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { BookOpen, Search, TrendingUp, Award } from "lucide-react";
+import { BookOpen, Search, TrendingUp, Award, AlertCircle } from "lucide-react";
 import { useQuery } from '@tanstack/react-query';
 import { getStudentTests, getStudentStatistics } from '@/services/api';
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 import Navigation from "@/components/Navigation";
 import TestCard from "@/components/TestCard";
 import { Test, Statistics } from '@/types/test';
@@ -15,66 +16,44 @@ const Index = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const { toast } = useToast();
-
-  console.log('Index component rendering');
+  const { user, isAuthenticated } = useAuth();
 
   // Fetch student tests
   const { data: tests = [], isLoading: isLoadingTests, error: testsError } = useQuery({
     queryKey: ['student-tests'],
     queryFn: getStudentTests,
-    retry: 2,
+    retry: 1,
+    enabled: isAuthenticated,
   });
 
   // Fetch student statistics
-  const { data: stats, isLoading: isLoadingStats } = useQuery({
+  const { data: stats, isLoading: isLoadingStats, error: statsError } = useQuery({
     queryKey: ['student-stats'],
     queryFn: getStudentStatistics,
-    retry: 2,
+    retry: 1,
+    enabled: isAuthenticated,
   });
 
-  console.log('Raw tests data from API:', tests);
-  console.log('Raw stats data from API:', stats);
-
   // Handle API errors
-  if (testsError) {
-    console.error('Error loading tests:', testsError);
-    toast({
-      title: "Xatolik",
-      description: "Testlarni yuklashda xatolik yuz berdi. Qayta urinib ko'ring.",
-      variant: "destructive",
-    });
+  if (testsError || statsError) {
+    console.error('API Errors:', { testsError, statsError });
   }
 
   // Transform and validate API data
-  const transformedTests: Test[] = Array.isArray(tests) ? tests.map((test: any) => {
-    console.log('Transforming test:', test);
-    
-    // Ensure all required fields exist and have proper types
-    const transformedTest: Test = {
-      id: test?.id || 0,
-      title: test?.title || 'Nomsiz test',
-      subject: test?.subject || 'Umumiy',
-      description: test?.description || '',
-      duration: test?.duration || 60,
-      max_score: test?.max_score || 100,
-      status: test?.status || 'available',
-      date: test?.created_at ? new Date(test.created_at).toLocaleDateString() : 'Noma\'lum',
-      score: test?.score || null,
-    };
-    
-    console.log('Transformed test:', transformedTest);
-    return transformedTest;
-  }).filter(test => test.id > 0) : []; // Filter out invalid tests
+  const transformedTests: Test[] = Array.isArray(tests) ? tests.map((test: any) => ({
+    id: test?.id || 0,
+    title: test?.title || 'Nomsiz test',
+    subject: test?.subject || 'Umumiy',
+    description: test?.description || '',
+    duration: test?.duration || 60,
+    max_score: test?.max_score || 100,
+    status: test?.status || 'available',
+    date: test?.created_at ? new Date(test.created_at).toLocaleDateString('uz-UZ') : 'Noma\'lum',
+    score: test?.score || null,
+  })).filter(test => test.id > 0) : [];
 
-  console.log('Final transformed tests:', transformedTests);
-
-  // Filter tests based on search and status with proper null checks
+  // Filter tests
   const filteredTests = transformedTests.filter((test) => {
-    if (!test || typeof test !== 'object') {
-      console.warn('Invalid test object:', test);
-      return false;
-    }
-
     const title = test.title || '';
     const subject = test.subject || '';
     const searchLower = (searchTerm || '').toLowerCase();
@@ -85,8 +64,6 @@ const Index = () => {
     
     return matchesSearch && matchesStatus;
   });
-
-  console.log('Filtered tests:', filteredTests);
 
   const defaultStats: Statistics = {
     total_tests_taken: stats?.total_tests_taken || 0,
@@ -108,6 +85,22 @@ const Index = () => {
     );
   }
 
+  if (testsError) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-blue-50">
+        <Navigation />
+        <div className="container mx-auto px-4 py-20 text-center">
+          <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+          <h2 className="text-3xl font-bold text-gray-800 mb-4">Ma'lumotlar yuklanmadi</h2>
+          <p className="text-gray-600 mb-8">
+            Testlar ma'lumotlarini olishda xatolik yuz berdi. Iltimos, qaytadan urinib ko'ring.
+          </p>
+          <Button onClick={() => window.location.reload()}>Qayta yuklash</Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-blue-50">
       <Navigation />
@@ -121,6 +114,11 @@ const Index = () => {
           <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
             Bilimingizni sinab ko'ring va o'z darajangizni aniqlang
           </p>
+          {user && (
+            <p className="text-lg text-indigo-600 font-medium">
+              Xush kelibsiz, {user.first_name || user.email}!
+            </p>
+          )}
         </div>
 
         {/* Statistics Cards */}
@@ -176,27 +174,18 @@ const Index = () => {
                 />
               </div>
               <div className="flex gap-2">
-                <Button
-                  variant={statusFilter === 'all' ? 'default' : 'outline'}
-                  onClick={() => setStatusFilter('all')}
-                  size="sm"
-                >
-                  Barchasi
-                </Button>
-                <Button
-                  variant={statusFilter === 'available' ? 'default' : 'outline'}
-                  onClick={() => setStatusFilter('available')}
-                  size="sm"
-                >
-                  Mavjud
-                </Button>
-                <Button
-                  variant={statusFilter === 'completed' ? 'default' : 'outline'}
-                  onClick={() => setStatusFilter('completed')}
-                  size="sm"
-                >
-                  Yakunlangan
-                </Button>
+                {['all', 'available', 'completed', 'upcoming'].map((filter) => (
+                  <Button
+                    key={filter}
+                    variant={statusFilter === filter ? 'default' : 'outline'}
+                    onClick={() => setStatusFilter(filter)}
+                    size="sm"
+                  >
+                    {filter === 'all' ? 'Barchasi' : 
+                     filter === 'available' ? 'Mavjud' :
+                     filter === 'completed' ? 'Yakunlangan' : 'Rejalashtirilgan'}
+                  </Button>
+                ))}
               </div>
             </div>
           </CardContent>

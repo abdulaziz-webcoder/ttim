@@ -6,6 +6,8 @@ import { Progress } from "@/components/ui/progress";
 import { BookOpen, Clock, Star, Play, CheckCircle, Calendar } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import { useMutation } from '@tanstack/react-query';
+import { startTest } from '@/services/api';
 import { Test } from '@/types/test';
 
 interface TestCardProps {
@@ -18,7 +20,21 @@ const TestCard = ({ test, delay = 0, expanded = false }: TestCardProps) => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  console.log('TestCard rendering with test:', test);
+  const startTestMutation = useMutation({
+    mutationFn: startTest,
+    onSuccess: () => {
+      console.log('Test started successfully, navigating to test page');
+      navigate(`/test/${test.id}`);
+    },
+    onError: (error: any) => {
+      console.error('Failed to start test:', error);
+      toast({
+        title: "Xatolik",
+        description: error.response?.data?.detail || "Testni boshlashda xatolik yuz berdi.",
+        variant: "destructive",
+      });
+    },
+  });
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -39,11 +55,10 @@ const TestCard = ({ test, delay = 0, expanded = false }: TestCardProps) => {
   };
 
   const handleStartTest = () => {
-    console.log('Attempting to start test:', test);
+    console.log('Starting test with ID:', test.id);
     
     if (test.status === 'available') {
-      console.log('Starting test with ID:', test.id);
-      navigate(`/test/${test.id}`);
+      startTestMutation.mutate(test.id);
     } else if (test.status === 'upcoming') {
       toast({
         title: "Test hali mavjud emas",
@@ -102,7 +117,7 @@ const TestCard = ({ test, delay = 0, expanded = false }: TestCardProps) => {
 
       <CardContent>
         {test.status === 'completed' && test.score !== null && (
-          <div className="space-y-3">
+          <div className="space-y-3 mb-4">
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium text-gray-600">Ball</span>
               <div className="flex items-center gap-2">
@@ -128,22 +143,28 @@ const TestCard = ({ test, delay = 0, expanded = false }: TestCardProps) => {
           </div>
         )}
 
+        <div className="text-sm text-gray-600 mb-4">
+          <p><strong>Davomiyligi:</strong> {test.duration} daqiqa</p>
+          <p><strong>Maksimal ball:</strong> {test.max_score}</p>
+        </div>
+
         {expanded && (
-          <div className="mt-4 flex gap-2">
+          <div className="flex gap-2">
             {test.status === 'available' && (
               <Button 
                 onClick={handleStartTest}
+                disabled={startTestMutation.isPending}
                 className="flex-1 bg-gradient-to-r from-indigo-500 to-blue-600 hover:from-indigo-600 hover:to-blue-700 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-indigo-400/20 border-none"
               >
                 <Play className="w-4 h-4 mr-2" />
-                Testni boshlash
+                {startTestMutation.isPending ? 'Boshlanmoqda...' : 'Testni boshlash'}
               </Button>
             )}
             {test.status === 'completed' && (
               <Button 
                 variant="outline" 
                 className="flex-1 border-indigo-200 hover:bg-indigo-50 transition-colors duration-300 text-indigo-700"
-                onClick={() => toast({ title: "Natijalarni ko'rish", description: "Ushbu funksiya tez orada qo'shiladi." })}
+                onClick={() => navigate(`/results/${test.id}`)}
               >
                 Natijalarni ko'rish
               </Button>

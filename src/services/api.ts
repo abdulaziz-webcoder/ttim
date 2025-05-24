@@ -9,7 +9,7 @@ const api: AxiosInstance = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
-  timeout: 30000, // 30 seconds timeout
+  timeout: 30000,
 });
 
 // Add a request interceptor to attach the token to every request
@@ -37,7 +37,6 @@ api.interceptors.response.use(
   (error) => {
     console.error('API Response Error:', error.response?.status, error.response?.data, error.config?.url);
     
-    // Handle authentication errors
     if (error.response?.status === 401) {
       localStorage.removeItem("jwt_token");
       localStorage.removeItem("refresh_token");
@@ -51,178 +50,68 @@ api.interceptors.response.use(
 
 // Authentication
 export const login = async (email: string, password: string) => {
-  try {
-    const response = await api.post("/auth/login/", { email, password });
-    return response.data;
-  } catch (error) {
-    console.error('Login error:', error);
-    throw error;
-  }
+  const response = await api.post("/auth/login/", { email, password });
+  return response.data;
 };
 
 export const register = async (userData: any) => {
-  try {
-    const response = await api.post("/auth/register/", userData);
-    return response.data;
-  } catch (error) {
-    console.error('Register error:', error);
-    throw error;
-  }
+  const response = await api.post("/auth/register/", userData);
+  return response.data;
 };
 
 export const refreshToken = async (refresh: string) => {
-  try {
-    const response = await api.post("/auth/refresh/", { refresh });
-    return response.data;
-  } catch (error) {
-    console.error('Refresh token error:', error);
-    throw error;
-  }
+  const response = await api.post("/auth/refresh/", { refresh });
+  return response.data;
 };
 
 // User
 export const getCurrentUser = async () => {
-  try {
-    const response = await api.get("/users/me/");
-    return response.data;
-  } catch (error) {
-    console.error('Get current user error:', error);
-    throw error;
-  }
+  const response = await api.get("/users/me/");
+  return response.data;
 };
 
-// Tests
-export const getAllTests = async () => {
-  try {
-    const response = await api.get("/tests/");
-    return response.data;
-  } catch (error) {
-    console.error('Get all tests error:', error);
-    throw error;
-  }
-};
-
+// Tests - Updated with better error handling
 export const getStudentTests = async () => {
-  try {
-    const response = await api.get("/tests/student_tests/");
-    return response.data;
-  } catch (error) {
-    console.error('Get student tests error:', error);
-    throw error;
-  }
+  const response = await api.get("/tests/student_tests/");
+  return response.data;
 };
 
 export const getTestDetails = async (id: number) => {
-  try {
-    const response = await api.get(`/tests/${id}/`);
-    return response.data;
-  } catch (error) {
-    console.error('Get test details error:', error);
-    throw error;
-  }
+  const response = await api.get(`/tests/${id}/`);
+  return response.data;
 };
 
-export const createTest = async (testData: any) => {
-  try {
-    const response = await api.post("/tests/", testData);
-    return response.data;
-  } catch (error) {
-    console.error('Create test error:', error);
-    throw error;
-  }
-};
-
-export const updateTest = async (id: number, testData: any) => {
-  try {
-    const response = await api.put(`/tests/${id}/`, testData);
-    return response.data;
-  } catch (error) {
-    console.error('Update test error:', error);
-    throw error;
-  }
-};
-
-export const deleteTest = async (id: number) => {
-  try {
-    const response = await api.delete(`/tests/${id}/`);
-    return response.data;
-  } catch (error) {
-    console.error('Delete test error:', error);
-    throw error;
-  }
-};
-
-// Questions
 export const getTestQuestions = async (testId: number) => {
-  try {
-    const response = await api.get(`/tests/${testId}/questions/`);
-    return response.data;
-  } catch (error) {
-    console.error('Get test questions error:', error);
-    throw error;
-  }
+  const response = await api.get(`/tests/${testId}/questions/`);
+  return response.data;
 };
 
-export const addQuestion = async (testId: number, questionData: any) => {
-  try {
-    const response = await api.post(`/tests/${testId}/questions/`, questionData);
-    return response.data;
-  } catch (error) {
-    console.error('Add question error:', error);
-    throw error;
-  }
+// Test Management
+export const startTest = async (testId: number) => {
+  const response = await api.post(`/tests/${testId}/start/`);
+  return response.data;
 };
 
-// Submissions
-export const getSubmissions = async () => {
-  try {
-    const response = await api.get("/submissions/");
-    return response.data;
-  } catch (error) {
-    console.error('Get submissions error:', error);
-    throw error;
-  }
-};
-
-export const submitTest = async (submissionData: any) => {
-  try {
-    const response = await api.post("/submissions/", submissionData);
-    return response.data;
-  } catch (error) {
-    console.error('Submit test error:', error);
-    throw error;
-  }
-};
-
-export const getSubmissionDetails = async (id: number) => {
-  try {
-    const response = await api.get(`/submissions/${id}/`);
-    return response.data;
-  } catch (error) {
-    console.error('Get submission details error:', error);
-    throw error;
-  }
+export const submitTest = async (submissionData: {
+  test: number;
+  answers: Array<{
+    question: number;
+    selected_option: number;
+  }>;
+}) => {
+  const response = await api.post("/submissions/", submissionData);
+  return response.data;
 };
 
 // Statistics
-export const getTestStatistics = async (id: number) => {
-  try {
-    const response = await api.get(`/stats/tests/${id}/`);
-    return response.data;
-  } catch (error) {
-    console.error('Get test statistics error:', error);
-    throw error;
-  }
+export const getStudentStatistics = async () => {
+  const response = await api.get("/stats/student/");
+  return response.data;
 };
 
-export const getStudentStatistics = async () => {
-  try {
-    const response = await api.get("/stats/student/");
-    return response.data;
-  } catch (error) {
-    console.error('Get student statistics error:', error);
-    throw error;
-  }
+export const getSubmissions = async () => {
+  const response = await api.get("/submissions/");
+  return response.data;
 };
 
 export default api;

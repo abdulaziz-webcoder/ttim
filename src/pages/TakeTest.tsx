@@ -38,14 +38,12 @@ const TakeTest = () => {
   const [answers, setAnswers] = useState<Record<number, number>>({});
   const [timeRemaining, setTimeRemaining] = useState(0);
 
-  console.log('TakeTest component loaded with testId:', testId);
-
   // Fetch test details
   const { data: testDetails, isLoading: isLoadingTest, error: testError } = useQuery({
     queryKey: ['test-details', testId],
     queryFn: () => getTestDetails(Number(testId)),
     enabled: !!testId,
-    retry: 2,
+    retry: 1,
   });
 
   // Fetch test questions
@@ -53,7 +51,7 @@ const TakeTest = () => {
     queryKey: ['test-questions', testId],
     queryFn: () => getTestQuestions(Number(testId)),
     enabled: !!testId,
-    retry: 2,
+    retry: 1,
   });
 
   // Submit test mutation
@@ -66,24 +64,24 @@ const TakeTest = () => {
       });
       navigate('/');
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error('Test submission error:', error);
       toast({
         title: "Xatolik",
-        description: "Testni yuborishda xatolik yuz berdi. Qayta urinib ko'ring.",
+        description: error.response?.data?.detail || "Testni yuborishda xatolik yuz berdi.",
         variant: "destructive",
       });
     },
   });
 
-  // Timer effect
+  // Timer setup
   useEffect(() => {
     if (testDetails?.duration) {
-      setTimeRemaining(testDetails.duration * 60); // Convert minutes to seconds
-      console.log('Timer set to:', testDetails.duration * 60, 'seconds');
+      setTimeRemaining(testDetails.duration * 60);
     }
   }, [testDetails]);
 
+  // Timer countdown
   useEffect(() => {
     if (timeRemaining > 0) {
       const timer = setTimeout(() => {
@@ -91,13 +89,11 @@ const TakeTest = () => {
       }, 1000);
       return () => clearTimeout(timer);
     } else if (timeRemaining === 0 && questions?.length > 0) {
-      console.log('Time expired, auto-submitting test');
       handleSubmitTest();
     }
   }, [timeRemaining, questions]);
 
   const handleAnswerChange = (questionId: number, optionId: number) => {
-    console.log('Answer changed:', { questionId, optionId });
     setAnswers(prev => ({
       ...prev,
       [questionId]: optionId
@@ -117,7 +113,6 @@ const TakeTest = () => {
   };
 
   const handleSubmitTest = () => {
-    console.log('Submitting test with answers:', answers);
     const submissionData = {
       test: Number(testId),
       answers: Object.entries(answers).map(([questionId, optionId]) => ({
@@ -126,7 +121,6 @@ const TakeTest = () => {
       }))
     };
 
-    console.log('Submission data:', submissionData);
     submitTestMutation.mutate(submissionData);
   };
 
@@ -136,17 +130,15 @@ const TakeTest = () => {
     return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
   };
 
-  // Error handling
   if (testError || questionsError) {
-    console.error('API Errors:', { testError, questionsError });
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-blue-50">
         <Navigation />
         <div className="container mx-auto px-4 py-20 text-center">
           <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
-          <h2 className="text-3xl font-bold text-gray-800 mb-4">Xatolik yuz berdi</h2>
+          <h2 className="text-3xl font-bold text-gray-800 mb-4">Test yuklab bo'lmadi</h2>
           <p className="text-gray-600 mb-8">
-            Testni yuklashda xatolik yuz berdi. Iltimos, qayta urinib ko'ring.
+            Test ma'lumotlarini olishda xatolik yuz berdi. Iltimos, qaytadan urinib ko'ring.
           </p>
           <Button onClick={() => navigate('/')}>Bosh sahifaga qaytish</Button>
         </div>
